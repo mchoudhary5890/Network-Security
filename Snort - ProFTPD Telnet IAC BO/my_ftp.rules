@@ -1,0 +1,55 @@
+
+
+#Variables already included in the conf file
+# The network addresses we are protecting
+
+#ipvar FTP_SERVER 192.168.139.156
+
+
+
+# The external network address
+
+#ipvar EXTERNAL_NET !$FTP_SERVER
+
+
+
+# The ports to be monitored for FTP Traffic
+
+#portvar FTP_CONTROL 21
+
+#portvar FTP_DATA 20
+
+
+
+#The external port
+
+#portvar EXTERNAL_PORT any
+
+
+# FTP TRAFFIC - Version #1:
+alert tcp $EXTERNAL_NET $EXTERNAL_PORT -> $FTP_SERVER [$FTP_CONTROL,$FTP_DATA] (flow:to_server,established;session:printable;msg:"FTP Traffic";sid:1000001;rev:1;)
+
+#FTP TRAFFIC - Version #2:
+#alert tcp $EXTERNAL_NET $EXTERNAL_PORT -> $FTP_SERVER $FTP_CONTROL (flow:to_server,established;pcre:"/(ABOR|ACCT|ADAT|ALLO|APPE|AUTH|CCC|CDUP|CONF|CWD|DELE|ENC|EPRT|EPSV|FEAT|HELP|LANG|LIST|LPRT|LPSV|MDTM|MIC|MKD|MLSD|MLST|MODE|NLST|NOOP|OPTS|PASS|PASV|PBSZ|PORT|PROT|PWD|QUIT|REIN|REST|RETR|RMD|RNFR|RNTO|SITE|SIZE|SMNT|STAT|STOR|STOU|STRU|SYST|TYPE|USER|XCUP|XMKD|XPWD|XRCP|XRMD|XRSQ|XSEM|XSEN)/"; session:printable; msg:"FTP Traffic";sid:1000001;rev:2;)
+
+
+# ProFTPD Vulnerability
+alert tcp $EXTERNAL_NET $EXTERNAL_PORT -> $FTP_SERVER $FTP_CONTROL(flow:to_server,established;content:"SITE"; nocase; within:10; content:"|FF FF FF|"; offset:125; session:all; msg:"ProFTP TELNET IAC Vulnerability"; sid:100002; rev:1; reference:cve,CVE-2010-4221; reference:url,bugs.proftpd.org/show_bug.cgi?id=3521;)
+
+
+
+#Revised Rule
+
+
+
+
+
+alert tcp $FTP_SERVER $FTP_CONTROL -> $EXTERNAL_NET $EXTERNAL_PORT (flow:established; msg:"Candidate ProFTPD TELNET IAC Vulnerability"; pcre:"/ProFTPD 1.3.(2|3)?(r|a|b|\s)?/"; flowbits:set,exploit; sid:100003; rev:1; flowbits:noalert;)
+
+
+
+alert tcp $EXTERNAL_NET $EXTERNAL_PORT -> $FTP_SERVER $FTP_CONTROL (msg:"Specific ProFTPD TELNET IAC Vulnerability"; flowbits:isset,exploit; content:"SITE"; nocase; within:10; content:"|FF FF FF|"; offset:125; session:all; sid:100004; rev:1; reference:cve,CVE-2010-4221;)
+
+
+
+
